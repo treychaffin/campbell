@@ -2,12 +2,16 @@ import requests
 
 
 class campbell:
+    """Used to interface with Campbell Scientific data loggers"""
+
     def __init__(self, address: str, tables: list) -> None:
+        """Initializes the class with the address of the data logger and a list of tables"""
         self.address: str = address
         self.tables: list = tables
         self.datafields: dict = self._datafields()
 
     def _fields(self, table) -> list:
+        """Returns a list of fields for a given table"""
         command = "dataquery"
         format = "json"
         mode = "backfill"
@@ -29,6 +33,7 @@ class campbell:
         return fields
 
     def _datafields(self) -> dict:
+        """Returns a dictionary of fields for all tables"""
         datafields: dict = {}
         for table in range(len(self.tables)):
             datafields[self.tables[table]] = self._fields(self.tables[table])
