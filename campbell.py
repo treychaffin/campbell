@@ -9,6 +9,7 @@ class campbell:
         self.address: str = address
         self.tables: list = tables
         self.datafields: dict = self._datafields()
+        self.data: dict = self.pull_recent()
 
     def _fields(self, table) -> list:
         """Returns a list of fields for a given table"""
@@ -39,33 +40,25 @@ class campbell:
             datafields[self.tables[table]] = self._fields(self.tables[table])
         return datafields
 
-    # def print_latest_data(self, table) -> None:
-    #     command = "dataquery"
-    #     format = "json"
-    #     mode = "backfill"
-    #     parameter = "p1=1"
+    def pull_recent(self) -> dict:
+        """Pulls the most recent data"""
 
-    #     url = f"http://{self.address}/?command={command}&uri=dl:{table}&format={format}&mode={mode}&{parameter}"
+        data: dict = {}
 
-    #     response = requests.get(url)
+        command = "dataquery"
+        format = "json"
+        mode = "backfill"
+        parameter = "p1=1"
 
-    #     if response.status_code == 200:
-    #         data = response.json()
-    #         date, time = data["data"][0]["time"].split("T")
-    #         print(f"Date:\t\t{date}")
-    #         print(f"Time:\t\t{time}\tUTC")
-    #         for i in range(len(data["head"]["fields"])):
-    #             field = data["head"]["fields"][i]["name"]
-    #             value = data["data"][1]["vals"][i]
+        for table in self.tables:
+            url = f"http://{self.address}/?command={command}&uri=dl:{table}&format={format}&mode={mode}&{parameter}"
 
-    #             try:
-    #                 units = data["head"]["fields"][i]["units"]
-    #             except KeyError:
-    #                 units = ""
+            response = requests.get(url)
 
-    #             if len(field) > 7:
-    #                 print(f"{field}\t{value}\t\t{units}")
-    #             else:
-    #                 print(f"{field}\t\t{value}\t\t{units}")
-    #     else:
-    #         print(f"Failed to retrieve data: {response.status_code}")
+            if response.status_code == 200:
+                recent_data = response.json()
+                data[table] = recent_data
+            else:
+                print(f"Failed to retrieve data: {response.status_code}")
+
+        return data
