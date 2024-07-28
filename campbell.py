@@ -82,6 +82,8 @@ class campbell:
     def data_dict(self, table) -> dict:
         """Returns a dictionary of the most recent data"""
         data_dict = {}
+        time = self.data[table]["data"][0]["time"]
+        data_dict["datetime"] = [time, "UTC"]
         for field in range(len(self.data[table]["head"]["fields"])):
             name = self.data[table]["head"]["fields"][field]["name"]
             value = self.data[table]["data"][0]["vals"][field]
