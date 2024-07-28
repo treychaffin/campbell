@@ -78,3 +78,16 @@ class campbell:
             data_table.append([name, value, units])
 
         return data_table
+
+    def data_dict(self, table) -> dict:
+        """Returns a dictionary of the most recent data"""
+        data_dict = {}
+        for field in range(len(self.data[table]["head"]["fields"])):
+            name = self.data[table]["head"]["fields"][field]["name"]
+            value = self.data[table]["data"][0]["vals"][field]
+            try:
+                units = self.data[table]["head"]["fields"][field]["units"]
+            except KeyError:
+                units = ""
+            data_dict[name] = [value, units]
+        return data_dict
