@@ -62,3 +62,19 @@ class campbell:
                 print(f"Failed to retrieve data: {response.status_code}")
 
         return data
+
+    def data_table(self, table) -> list:
+        """Prints the data table"""
+        time = self.data[table]["data"][0]["time"]
+        data_table = [["time", time, "UTC"]]
+
+        for field in range(len(self.data[table]["head"]["fields"])):
+            name = self.data[table]["head"]["fields"][field]["name"]
+            value = self.data[table]["data"][0]["vals"][field]
+            try:
+                units = self.data[table]["head"]["fields"][field]["units"]
+            except KeyError:
+                units = ""
+            data_table.append([name, value, units])
+
+        return data_table
