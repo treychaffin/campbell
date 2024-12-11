@@ -25,6 +25,7 @@ class campbell:
         self.time_offset: datetime.timedelta = kwargs.get(
             "time_offset", datetime.timedelta(hours=0)
         )
+        self.timeout = kwargs.get("timeout", 10)
 
         # list acceptable formats as defined in API documentation
         self.formats: list = [
@@ -40,7 +41,7 @@ class campbell:
     ) -> requests.Response:
         """returns the response from the data logger"""
         url = f"http://{self.address}/?command={command}&uri=dl:{table}&format={format}&mode={mode}&{parameter}"
-        response = requests.get(url)
+        response = requests.get(url, timeout=self.timeout)
         if response.status_code == 200:
             return response
         else:
@@ -172,7 +173,7 @@ class campbell:
             command = f"{command}&format={format}"
 
         url = f"http://{self.address}/?command={command}"
-        response = requests.get(url)
+        response = requests.get(url, timeout=self.timeout)
         if response.status_code == 200:
             return response
         else:
