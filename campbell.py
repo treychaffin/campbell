@@ -165,3 +165,32 @@ class campbell:
         parameter = f"p1={int(interval.total_seconds())}"
 
         return self._data(command, format, mode, parameter)
+
+    def _control_command(self, command: str, **kwargs) -> requests.Response:
+        if "format" in kwargs:
+            format = kwargs["format"]
+            self._assert_format(format)
+            command = f"{command}&format={format}"
+
+        url = f"http://{self.address}/?command={command}"
+        response = requests.get(url)
+        if response.status_code == 200:
+            return response
+        else:
+            logging.error(
+                f"Request failed with status code: {response.status_code} url: {url}"
+            )
+            response.raise_for_status()
+            return response
+
+    def clock_check(self, **kwargs) -> str:
+        """
+        Returns the current time of the data logger
+        """
+        command = "ClockCheck"
+        if "format" in kwargs:
+            format = kwargs["format"]
+            if format == "json":
+                return self._control_command(command, format=format).json()
+            return self._control_command(command, format=format).text
+        return self._control_command(command).text
