@@ -36,7 +36,7 @@ class campbell:
             "xml",
         ]
 
-    def _request(
+    def _data_access(
         self, command: str, table: str, format: str, mode: str, parameter: str
     ) -> requests.Response:
         """returns the response from the data logger"""
@@ -58,11 +58,11 @@ class campbell:
 
         for table in self.tables:
             if format == "json":
-                data[table] = self._request(
+                data[table] = self._data_access(
                     command, table, format, mode, parameter
                 ).json()
             else:
-                data[table] = self._request(
+                data[table] = self._data_access(
                     command, table, format, mode, parameter
                 ).text
 
