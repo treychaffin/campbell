@@ -1,6 +1,5 @@
 import requests
 import datetime
-from typing import Union
 
 import logging
 
