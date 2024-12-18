@@ -1,12 +1,14 @@
 import requests
 import datetime
+import base64
+from typing import Union
 
 import logging
 
 logging.basicConfig(level=logging.DEBUG)
 
 
-class campbell:
+class Campbell:
     """
     Used to interface with Campbell Scientific data loggers via the web API
 
@@ -19,178 +21,421 @@ class campbell:
         tables: list,
         **kwargs,
     ) -> None:
-        """Initializes the class with the address of the data logger and a list of tables"""
+        """
+        Initializes the class with the address of the data logger
+        and a list of tables
+        """
         self.address: str = address
         self.tables: list = tables
-        self.time_offset: datetime.timedelta = kwargs.get(
-            "time_offset", datetime.timedelta(hours=0)
-        )
         self.timeout = kwargs.get("timeout", 10)
+        if "username" in kwargs and "password" in kwargs:
+            self.username = kwargs["username"]
+            self.password = kwargs["password"]
 
-        # list acceptable formats as defined in API documentation
-        self.formats: list = [
-            "html",
-            "json",
-            "toa5",
-            "tob1",
-            "xml",
-        ]
+        self.DataAccess = self._DataAccess(self)
+        self.ControlCommand = self._ControlCommand(self)
+        self.FileManagement = self._FileManagement(self)
 
-    def _data_access(
-        self, command: str, table: str, format: str, mode: str, parameter: str
-    ) -> requests.Response:
-        """returns the response from the data logger"""
-        url = f"http://{self.address}/?command={command}&uri=dl:{table}&format={format}&mode={mode}&{parameter}"
-        response = requests.get(url, timeout=self.timeout)
-        if response.status_code == 200:
-            return response
+    # def _api_request(self, command: str, **kwargs) -> Union[dict, str]:
+    def _api_request(self, command: str, **kwargs) -> None:
+
+        if hasattr(self, "username") and hasattr(self, "password"):
+            url = f"http://{self.username}:{self.password}@{self.address}/"
         else:
-            logging.error(
-                f"Request failed with status code: {response.status_code} url: {url}"
-            )
-            response.raise_for_status()
-            return response
+            url = f"http://{self.address}/"
 
-    def _data(self, command: str, format: str, mode: str, parameter: str) -> dict:
-        """returns the data from the response"""
+        if "new_file_name" in kwargs:
+            url += f"{kwargs['new_file_name']}"
 
-        data: dict = {}
+        url += f"?command={command}"
 
-        for table in self.tables:
-            if format == "json":
-                data[table] = self._data_access(
-                    command, table, format, mode, parameter
-                ).json()
-            else:
-                data[table] = self._data_access(
-                    command, table, format, mode, parameter
-                ).text
+        if "expr" in kwargs:
+            url += f"&expr={kwargs['expr']}"
 
-        return data
+        if "file1" in kwargs:
+            url += f"&file={kwargs['file1']}"
 
-    def _assert_format(self, format: str) -> None:
-        assert format in self.formats, f"format must be one of {self.formats}"
+        if "file2" in kwargs:
+            url += f"&file2={kwargs['file2']}"
 
-    def most_recent(self, records: int = 1, **kwargs) -> dict:
-        """
-        Returns the data from the most recent number of records
+        if "action" in kwargs:
+            url += f"&action={kwargs['action']}"
 
-        Parameters:
-            records (int): the number of records to pull
-        """
+        if "table" in kwargs:
+            url += f"&uri=dl:{kwargs['table']}"
 
-        command = "dataquery"
-        format = kwargs.get("format", "json")
-        self._assert_format(format)
-        mode = "backfill"
-        parameter = f"p1={records}"
+        if "value" in kwargs:
+            url += f"&value={kwargs['value']}"
 
-        return self._data(command, format, mode, parameter)
+        if "mode" in kwargs:
+            url += f"&mode={kwargs['mode']}"
 
-    def since_time(self, time: datetime.timedelta, **kwargs) -> dict:
-        """
-        Returns all the data since a certain time
-
-        Parameters:
-            time (datetime.timedelta): the time to pull data since
-
-        Returns:
-            dict: a dictionary of the data since the time
-        """
-
-        now = datetime.datetime.now()
-        since_time = now - time - self.time_offset
-
-        command = "dataquery"
-        format = kwargs.get("format", "json")
-        self._assert_format(format)
-        mode = "since-time"
-        parameter = f"p1={since_time.strftime("%Y-%m-%dT%H:%M:%S.%f")}"
-
-        return self._data(command, format, mode, parameter)
-
-    def since_record(self, record: int, **kwargs) -> dict:
-        """
-        Returns all the data since a certain record
-
-        Parameters:
-            record (int): the record to pull data since
-
-        Returns:
-            dict: a dictionary of the data since the record
-        """
-
-        command = "dataquery"
-        format = kwargs.get("format", "json")
-        self._assert_format(format)
-        mode = "since-record"
-        parameter = f"p1={record}"
-
-        return self._data(command, format, mode, parameter)
-
-    def date_range(
-        self, start: datetime.datetime, end: datetime.datetime, **kwargs
-    ) -> dict:
-        """
-        Returns all the data between two dates
-
-        Parameters:
-            start (datetime.datetime): the start date
-            end (datetime.datetime): the end date
-
-        Returns:
-            dict: a dictionary of the data between the two dates
-        """
-
-        command = "dataquery"
-        format = kwargs.get("format", "json")
-        self._assert_format(format)
-        mode = "date-range"
-        parameter = f"p1={start.strftime("%Y-%m-%dT%H:%M:%S.%f")}&p2={end.strftime("%Y-%m-%dT%H:%M:%S.%f")}"
-
-        return self._data(command, format, mode, parameter)
-
-    def backfill(self, interval: datetime.timedelta, **kwargs) -> dict:
-        """
-        Returns the data from the called interval
-
-        Parameters:
-            interval (datetime.timedelta): the interval to pull data from
-        """
-
-        command = "dataquery"
-        format = kwargs.get("format", "json")
-        self._assert_format(format)
-        mode = "backfill"
-        parameter = f"p1={int(interval.total_seconds())}"
-
-        return self._data(command, format, mode, parameter)
-
-    def _control_command(self, command: str, **kwargs) -> requests.Response:
         if "format" in kwargs:
-            format = kwargs["format"]
-            self._assert_format(format)
-            command = f"{command}&format={format}"
+            url += f"&format={kwargs['format']}"
 
-        url = f"http://{self.address}/?command={command}"
-        response = requests.get(url, timeout=self.timeout)
-        if response.status_code == 200:
-            return response
+        if "time" in kwargs and command == "ClockSet":
+            url += f"&time={kwargs['time']}"
+
+        if "parameter1" in kwargs:
+            url += f"&p1={kwargs['parameter1']}"
+
+        if "parameter2" in kwargs:
+            url += f"&p2={kwargs['parameter2']}"
+
+        if "format" in kwargs and kwargs["format"] == "json":
+            # return self._request(url).json()
+            return self._request(url)
         else:
-            logging.error(
-                f"Request failed with status code: {response.status_code} url: {url}"
-            )
-            response.raise_for_status()
-            return response
+            # return self._request(url).text
+            return self._request(url)
 
-    def clock_check(self, **kwargs) -> str:
-        """
-        Returns the current time of the data logger
-        """
-        command = "ClockCheck"
-        if "format" in kwargs:
-            format = kwargs["format"]
-            if format == "json":
-                return self._control_command(command, format=format).json()
-            return self._control_command(command, format=format).text
-        return self._control_command(command).text
+    # def _request(self, url) -> requests.Response:
+    # try:
+    #     response = requests.get(url, timeout=self.timeout)
+    #     if response.status_code == 200:
+    #         return response
+    #     response.raise_for_status()
+
+    # except requests.exceptions.HTTPError as errh:
+    #     logging.error("Http Error:", errh)
+
+    # except requests.exceptions.ConnectionError as errc:
+    #     logging.error("Error Connecting:", errc)
+
+    # except requests.exceptions.Timeout as errt:
+    #     logging.error("Timeout Error:", errt)
+
+    # except requests.exceptions.RequestException as err:
+    #     logging.error("OOps: Something Else", err)
+
+    # finally:
+    #     return response
+
+    def _request(self, url) -> None:
+        print(url)
+
+    class _DataAccess:
+        def __init__(self, parent):
+            self.parent = parent
+
+        def dataquery(self, mode, **kwargs):
+            command = "dataquery"
+            valid_modes = [
+                "most-recent",
+                "since-time",
+                "since-record",
+                "date-range",
+                "backfill",
+            ]
+            assert mode in valid_modes, f"mode must be one of {valid_modes}"
+
+            valid_kwargs = [
+                "format",
+                "records",
+                "time",
+                "record",
+                "start",
+                "end",
+                "interval",
+                "table",
+            ]
+            for key in kwargs:
+                assert key in valid_kwargs, f"invalid keyword argument: {key}"
+
+            valid_formats = ["html", "json", "toa5", "tob1", "xml"]
+            if "format" in kwargs:
+                assert (
+                    kwargs["format"] in valid_formats
+                ), f"format must be one of {valid_formats}"
+
+            format = kwargs.get("format", "json")  # default to json
+
+            def _get_data(**kwargs):
+                data = {}
+
+                for table in self.parent.tables:
+                    data[table] = self.parent._api_request(command, **kwargs)
+
+                return data
+
+            if mode == "most-recent":
+                assert "records" in kwargs, "records (int) must be provided"
+                assert isinstance(kwargs["records"], int), "records must be an int"
+
+                parameter = kwargs["records"]
+
+                return _get_data(
+                    mode=mode, parameter1=parameter, format=format, **kwargs
+                )
+
+            elif mode == "since-time":
+                assert "time" in kwargs, "time (datetime.datetime) must be provided"
+                assert isinstance(
+                    kwargs["time"], datetime.datetime
+                ), "time must be a datetime.datetime object"
+
+                parameter = kwargs["time"].strftime("%Y-%m-%dT%H:%M:%S.%f")
+
+                return _get_data(
+                    mode=mode, parameter1=parameter, format=format, **kwargs
+                )
+
+            elif mode == "since-record":
+                assert "record" in kwargs, "record (int) must be provided"
+                assert isinstance(kwargs["record"], int), "record must be an int"
+
+                parameter = kwargs["record"]
+
+                return _get_data(
+                    mode=mode, parameter=parameter, format=format, **kwargs
+                )
+
+            elif mode == "date-range":
+                assert "start" in kwargs and "end" in kwargs, "".join(
+                    [
+                        "start (datetime.datetime) ",
+                        "and end (datetime.datetime) must be provided",
+                    ]
+                )
+                assert isinstance(kwargs["start"], datetime.datetime) and isinstance(
+                    kwargs["end"], datetime.datetime
+                ), "start and end must be datetime.datetime objects"
+
+                parameter1 = kwargs["start"].strftime("%Y-%m-%dT%H:%M:%S.%f")
+                parameter2 = kwargs["end"].strftime("%Y-%m-%dT%H:%M:%S.%f")
+
+                return _get_data(
+                    mode=mode,
+                    parameter1=parameter1,
+                    parameter2=parameter2,
+                    format=format,
+                    **kwargs,
+                )
+
+            elif mode == "backfill":
+                assert (
+                    "interval" in kwargs
+                ), "interval (datetime.timedelta) must be provided"
+                assert isinstance(
+                    kwargs["interval"], datetime.timedelta
+                ), "interval must be a datetime.timedelta object"
+
+                parameter = int(kwargs["interval"].total_seconds())
+
+                return _get_data(
+                    mode=mode, parameter1=parameter, format=format, **kwargs
+                )
+
+        def browsesymbols(self, **kwargs):
+            valid_kwargs = ["table", "format"]
+            for key in kwargs:
+                assert key in valid_kwargs, f"invalid keyword argument: {key}"
+
+            valid_formats = ["html", "json", "xml"]
+            if "format" in kwargs:
+                assert (
+                    kwargs["format"] in valid_formats
+                ), f"format must be one of {valid_formats}"
+
+            command = "browsesymbols"
+            format = kwargs.get("format", "json")
+
+            return self.parent._api_request(command, format=format, **kwargs)
+
+    class _ControlCommand:
+        def __init__(self, parent):
+            self.parent = parent
+            self.setvaluex_result_codes = {
+                0: "An unrecognized failure occurred",
+                1: "Success",
+                2: "".join(
+                    [
+                        "The data source connection failed ",
+                        "(LoggerNet data sources only)",
+                    ]
+                ),
+                3: "LoggerNet logon failed (LoggerNet data sources only)",
+                4: "Blocked by LoggerNet security (LoggerNet data sources only)",
+                5: "Read only",
+                6: "Invalid table name",
+                7: "Invalid fieldname",
+                8: "Invalid fieldname subscript",
+                9: "Invalid field data type",
+                10: "Datalogger communication failed",
+                11: "Datalogger communication disabled (LoggerNet data sources only)",
+                12: "Blocked by datalogger security",
+                13: "Invalid table definitions (LoggerNet data sources only)",
+                14: "Invalid device name (LoggerNet data sources only)",
+                15: "Invalid web client authorization",
+            }
+            self.clock_result_codes = {
+                1: "The clock was checked (successful)",
+                2: "The clock was set",
+                3: "The LoggerNet session failed (LoggerNet data sources only)",
+                4: "Invalid LoggerNet logon (LoggerNet data sources only)",
+                5: "Blocked by LoggerNet security (LoggerNet data sources only)",
+                6: "Communication with the station failed (LoggerNet data sources only)",
+                7: "Communication with the station disabled (LoggerNet data sources only)",
+                8: "Blocked by datalogger security",
+                9: "Invalid station name (LoggerNet data sources only)",
+                10: "LoggerNet device is busy (LoggerNet data sources only)",
+                11: "Specified URI does not reference a LoggerNet station (LoggerNet data sources only)",
+            }
+
+        def setvaluex(self, table, field, value, **kwargs):
+            uri = f"dl:{table}:{field}"
+            value = str(value)
+            raise NotImplementedError("This function is not yet implemented")
+
+        def clockcheck(self, **kwargs) -> Union[dict, str]:
+            """
+            Returns the current time of the data logger
+            """
+            command = "ClockCheck"
+            return self.parent._api_request(command, **kwargs)
+
+        def clockset(self, time: datetime.datetime):
+            raise NotImplementedError("This function is not yet implemented")
+
+    class _FileManagement:
+        def __init__(self, parent):
+            self.parent = parent
+
+            # description of action commands, copied from API documentation
+            self.action_descriptions = {
+                1: "".join(
+                    [
+                        "Compile and run the file specified by File and mark ",
+                        "it as the program to be run on power up.",
+                    ]
+                ),
+                2: "".join(
+                    [
+                        "Mark the file specified by File as the program to ",
+                        "be run on power up.",
+                    ]
+                ),
+                3: "Mark the file specified by File as hidden.",
+                4: "Delete the file specified by File.",
+                5: "Format the device specified by File.",
+                6: "".join(
+                    [
+                        "Compile and run the file specified by File without ",
+                        "deleting existing data tables.",
+                    ]
+                ),
+                7: "Stop the currently running program.",
+                8: "".join(
+                    [
+                        "Stop the currently running program and delete ",
+                        "associated data tables.",
+                    ]
+                ),
+                9: "".join(
+                    [
+                        "Install the operating system (*.obj) specified by ",
+                        "File. The file must reside on the datalogger's CPU ",
+                        "drive (sent to the datalogger using HTTPPut)",
+                    ]
+                ),
+                10: "".join(
+                    [
+                        "Compile and run the program specified by File but ",
+                        "do not change the program currently marked to run ",
+                        "on power up.",
+                    ]
+                ),
+                11: "Pause execution of the currently running program.",
+                12: "Resume execution of the currently paused program.",
+                13: "".join(
+                    [
+                        "Stop the currently running program, delete its ",
+                        "associated data tables, run the program specified ",
+                        "by File, and mark the same file as the program to ",
+                        "be run on power up.",
+                    ]
+                ),
+                14: "".join(
+                    [
+                        "Stop the currently running program, delete its ",
+                        "associated data tables, and run the program ",
+                        "specified by File without affecting the program to ",
+                        "be run on power up.",
+                    ]
+                ),
+                15: "".join(
+                    [
+                        "Move the file specified by File2 to the name ",
+                        "specified by File.",
+                    ]
+                ),
+                16: "".join(
+                    [
+                        "Move the file specified by File2 to the name ",
+                        "specified by File, stop the currently running ",
+                        "program, delete its associated data tables, and run ",
+                        "the program specified by File2 while marking it to ",
+                        "run on power up.",
+                    ]
+                ),
+                17: "".join(
+                    [
+                        "Move the file specified by File2 to the name ",
+                        "specified by File, stop the currently running ",
+                        "program, delete its associated data tables, and run ",
+                        "the program specified by File2 without affecting ",
+                        "the program that will run on power up.",
+                    ]
+                ),
+                18: "".join(
+                    [
+                        "Copy the file specified by File2 to the name ",
+                        "specified by File.",
+                    ]
+                ),
+                19: "".join(
+                    [
+                        "Copy the file specified by File2 to the name ",
+                        "specified by File, stop the currently running ",
+                        "program, delete its associated data tables, and run ",
+                        "the program specified by File2 while marking it to ",
+                        "run on power up.",
+                    ]
+                ),
+                20: "".join(
+                    [
+                        "Copy the file specified by File2 to the name ",
+                        "specified by File, stop the currently running ",
+                        "program, delete its associated data tables, and run ",
+                        "the program specified by File2 without affecting ",
+                        "the program that will run on power up.",
+                    ]
+                ),
+            }
+
+        def newestfile(self):
+            raise NotImplementedError("This function is not yet implemented")
+
+        def listfiles(self):
+            raise NotImplementedError("This function is not yet implemented")
+
+        def filecontrol(self):
+            raise NotImplementedError("This function is not yet implemented")
+
+        def addfile(self, filename: str) -> requests.Response:
+            import warnings
+
+            warnings.warn("This function is untested")
+
+            username = self.parent.username
+            password = self.parent.password
+            auth = f"{username}:{password}".encode("utf-8")
+            authentication = base64.b64encode(auth)
+            authentication = str(authentication, encoding="utf-8")
+            headers = {"Authorization": f"{authentication}"}
+            url = f"http://{self.parent.address}/CPU/{filename}"
+
+            with open(filename, "rb") as payload:
+                result = requests.put(url, headers=headers, data=payload)
+
+            return result
