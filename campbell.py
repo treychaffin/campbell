@@ -283,9 +283,15 @@ class Campbell:
             self.parent = parent
 
         def setvaluex(self, table, field, value, **kwargs):
-            uri = f"dl:{table}:{field}"
-            value = str(value)
-            raise NotImplementedError("This function is not yet implemented")
+            import warnings
+
+            warnings.warn("This function is untested")
+
+            return self.parent._api_request("setvaluex",
+                                            table=table,
+                                            field=field,
+                                            value=value,
+                                            **kwargs)
 
         def clockcheck(self, **kwargs) -> Union[dict, str]:
             """
