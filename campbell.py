@@ -294,8 +294,13 @@ class Campbell:
             command = "ClockCheck"
             return self.parent._api_request(command, **kwargs)
 
-        def clockset(self, time: datetime.datetime):
-            raise NotImplementedError("This function is not yet implemented")
+        def clockset(self, time: datetime.datetime, **kwargs) -> Union[dict, str, None]:
+            import warnings
+
+            warnings.warn("This function is untested")
+            return self.parent._api_request("ClockSet",
+                                            time=time.strftime(
+                                                "%Y-%m-%dT%H:%M:%S.%f"))
 
     class _FileManagement:
         def __init__(self, parent):
