@@ -291,6 +291,12 @@ class Campbell:
 
             warnings.warn("This function is untested")
 
+            valid_formats = ["html", "json", "xml"]
+            if "format" in kwargs:
+                assert (
+                    kwargs["format"] in valid_formats
+                ), f"format must be one of {valid_formats}"
+
             return self.parent._api_request("setvaluex",
                                             table=table,
                                             field=field,
