@@ -54,6 +54,12 @@ class Campbell:
 
     def _api_request(self, command: str, **kwargs) -> Union[dict, str, None]:
 
+        if "format" in kwargs:
+            format = kwargs["format"]
+            kwargs.pop("format")
+        else:
+            format = "json"
+
         if hasattr(self, "username") and hasattr(self, "password"):
             url = f"http://{self.username}:{self.password}@{self.address}/"
         else:
@@ -88,8 +94,10 @@ class Campbell:
         if "mode" in kwargs:
             url += f"&mode={kwargs['mode']}"
 
-        if "format" in kwargs:
-            url += f"&format={kwargs['format']}"
+        valid_format_commands = ["ClockSet",
+                                 "ClockCheck", "dataquery", "browsesymbols"]
+        if command in valid_format_commands:
+            url += f"&format={format}"
 
         if "time" in kwargs and command == "ClockSet":
             url += f"&time={kwargs['time']}"
