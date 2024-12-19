@@ -294,7 +294,9 @@ class Campbell:
             command = "ClockCheck"
             return self.parent._api_request(command, **kwargs)
 
-        def clockset(self, time: datetime.datetime, **kwargs) -> Union[dict, str, None]:
+        def clockset(self,
+                     time: datetime.datetime,
+                     **kwargs) -> Union[dict, str, None]:
             import warnings
 
             warnings.warn("This function is untested")
