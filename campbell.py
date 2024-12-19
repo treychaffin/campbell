@@ -95,7 +95,11 @@ class Campbell:
             url += f"&mode={kwargs['mode']}"
 
         valid_format_commands = ["ClockSet",
-                                 "ClockCheck", "dataquery", "browsesymbols"]
+                                 "ClockCheck",
+                                 "dataquery",
+                                 "browsesymbols",
+                                 "setvaluex"]
+
         if command in valid_format_commands:
             url += f"&format={format}"
 
