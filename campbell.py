@@ -116,7 +116,7 @@ class Campbell:
 
         response = self._request(url)
         if response.status_code == 200:
-            if "format" in kwargs and kwargs["format"] == "json":
+            if format == "json":
                 return self._request(url).json()
             else:
                 return self._request(url).text
