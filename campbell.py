@@ -84,9 +84,8 @@ class Campbell:
 
         if "table" in kwargs:
             url += f"&uri=dl:{kwargs['table']}"
-
-        if "field" in kwargs:
-            url += f".{kwargs['field']}"
+            if "field" in kwargs:
+                url += f".{kwargs['field']}"
 
         if "value" in kwargs:
             url += f"&value={kwargs['value']}"
