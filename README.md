@@ -8,7 +8,9 @@ This Python library is intended to mimic the structure of the Campbell API docum
 
 ## Installation
 
-To install the library, you can use `pip`:
+<del>To install the library, you can use `pip`:
+
+installation through pip is currently not supported
 
 ```sh
 pip install campbell
