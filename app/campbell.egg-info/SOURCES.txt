@@ -1,0 +1,8 @@
+LICENSE.txt
+README.md
+setup.py
+app/campbell.egg-info/PKG-INFO
+app/campbell.egg-info/SOURCES.txt
+app/campbell.egg-info/dependency_links.txt
+app/campbell.egg-info/requires.txt
+app/campbell.egg-info/top_level.txt
