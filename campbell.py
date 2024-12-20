@@ -40,13 +40,13 @@ class Campbell:
         if "tables" in kwargs:
             self.tables = kwargs["tables"]
         else:
-            self.tables = self._get_tables()
+            self.tables = self.get_tables()
 
         end_time = time.time()
         duration = end_time - start_time
         log.info(f"Initialization took {duration:.6f} seconds")
 
-    def _get_tables(self) -> list:
+    def get_tables(self) -> list:
         tables = []
         for name in self.Data.symbols()['symbols']:
             tables.append(name['name'])
