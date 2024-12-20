@@ -122,7 +122,6 @@ class Campbell:
                 return response.text
 
     def _request(self, url) -> requests.Response:
-        log.debug(f"Requesting {url=}")
         start_time = time.time()
         try:
             response = requests.get(url, timeout=self.timeout)
