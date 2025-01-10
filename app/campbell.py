@@ -114,14 +114,15 @@ class Campbell:
         log.debug(f"{url=}")
 
         response = self._request(url)
-        if response.status_code == 200:
+        if response is not None and response.status_code == 200:
             if format == "json":
                 return response.json()
             else:
                 return response.text
 
-    def _request(self, url) -> requests.Response:
+    def _request(self, url) -> requests.Response | None:
         start_time = time.time()
+        response = None
         try:
             response = requests.get(url, timeout=self.timeout)
             response.raise_for_status()
@@ -142,6 +143,8 @@ class Campbell:
             end_time = time.time()
             duration = end_time - start_time
             log.info(f"Request took {duration:.6f} seconds")
+            if response is None:
+                log.error("No response received")
             return response
 
     class _DataAccess:
